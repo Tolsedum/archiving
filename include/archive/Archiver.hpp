@@ -1,0 +1,105 @@
+#ifndef ARCHIVER_HPP
+#define ARCHIVER_HPP
+
+#include <zip.h>
+#include <string>
+#include <vector>
+#include <map>
+#include <fstream>
+#include <filesystem>
+#include <iostream>
+#include <memory>
+
+namespace archive{
+    class Archiver{
+    private:
+        /** https://libzip.org/documentation/zip_set_file_compression.html#ZIP_CM_DEFAULT */
+
+        int compression_method_;
+
+        short flag_;
+
+        std::string archive_file_name_;
+        std::string error_message_;
+
+        std::map<std::string, std::string> add_file_name_list_;
+        std::map<std::string, std::string> add_dir_name_list_;
+
+        std::vector<std::string> add_delete_file_list_;
+
+        /**
+         * @brief Find file in archive
+         */
+        zip_int64_t findFileInZipT(std::string file_name, zip_t *archive);
+
+
+        /**
+         * @brief Recursively put directories and files in a directory in archive
+         * @param archive
+         * @param path_source
+         * @param path_destination
+         */
+        void putDirs(zip_t *archive, std::string path_source, std::string path_destination);
+        /**
+         * @brief Put files in archive
+         * @param archive
+         * @param file_sours file sours
+         * @param file_destination file destination
+         */
+        void putFiels(zip_t *archive, std::string file_sours, std::string file_destination);
+
+    public:
+        Archiver(std::string name, short flag = 0)
+            : flag_(flag)
+            , archive_file_name_(name)
+
+        {};
+        ~Archiver(){};
+
+        std::string getErrorMessage();
+
+        /**
+         * @brief Add dirs in list
+         * @param name_dirs pair<dir source, dir destination>
+         */
+        void addDirs(std::map<std::string, std::string> name_dirs);
+
+        /**
+         * @brief Add files in list
+         * @param name_dirs pair<file source, file destination>
+         */
+        void addFiles(std::map<std::string, std::string> name_files);
+
+        /**
+         * @brief Add dir in list
+         */
+        void addDir(std::string dir_source, std::string dir_destination);
+
+        /**
+         * @brief Add file in list
+         */
+        void addFile(std::string file_source, std::string file_destination);
+
+        /**
+         * @brief Delete files from list and archive
+         */
+        void deleteFiles(std::vector<std::string> file_list);
+
+        /**
+         * @brief Delete file from  list and archive
+         */
+        void deleteFile(std::string file_name);
+
+        /**
+         * @brief Reset all changes and close archive
+         */
+        void cancel();
+
+        /**
+         * @brief Save and close archive
+         */
+        void save();
+    };
+}
+
+#endif // ARCHIVER_HPP
