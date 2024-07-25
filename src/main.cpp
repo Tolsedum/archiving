@@ -17,8 +17,14 @@ int main(int argc, char *argv[]){
         archive::Archiver zip_compressor("test.zip");
         zip_compressor.addFiles({{"test.txt", "test.txt"}});
         zip_compressor.addDirs({{"test", "test"}});
-        zip_compressor.save();
-        // std::cout<< "getErrorMessage: " << zip_compressor.getErrorMessage() << std::endl;
+        // zip_compressor.deleteFile("test.txt");
+        if(!zip_compressor.save()){
+            std::cout<< "Error: " << zip_compressor.getErrorMessage() << std::endl;
+        }
+        for (auto &&warning : zip_compressor.getWarningsMessage()){
+            std::cout<< warning << std::endl;
+        }
+
     }catch(const std::string e){
         std::cerr << e << '\n';
     }catch(const char* e){
@@ -26,9 +32,5 @@ int main(int argc, char *argv[]){
     }catch(const std::exception& e){
         std::cerr << e.what() << '\n';
     }
-
-
-
-
     return 0;
 }

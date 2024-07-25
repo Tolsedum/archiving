@@ -27,10 +27,12 @@ namespace archive{
 
         std::vector<std::string> add_delete_file_list_;
 
+        std::vector<std::string> warnings_;
+
         /**
          * @brief Find file in archive
          */
-        zip_int64_t findFileInZipT(std::string file_name, zip_t *archive);
+        zip_int64_t findFileInZipT(zip_t *archive, std::string file_name);
 
 
         /**
@@ -39,14 +41,19 @@ namespace archive{
          * @param path_source
          * @param path_destination
          */
-        void putDirs(zip_t *archive, std::string path_source, std::string path_destination);
+        bool putDirs(zip_t *archive, std::string path_source, std::string path_destination);
         /**
          * @brief Put files in archive
          * @param archive
          * @param file_sours file sours
          * @param file_destination file destination
          */
-        void putFiels(zip_t *archive, std::string file_sours, std::string file_destination);
+        bool putFiels(zip_t *archive, std::string file_sours, std::string file_destination);
+        /**
+         * @brief Delete file in archive
+         * @param file_name
+        */
+        bool delFile(zip_t *archive, std::string file_name);
 
     public:
         Archiver(std::string name, short flag = 0)
@@ -57,6 +64,7 @@ namespace archive{
         ~Archiver(){};
 
         std::string getErrorMessage();
+        std::vector<std::string> getWarningsMessage();
 
         /**
          * @brief Add dirs in list
@@ -98,7 +106,7 @@ namespace archive{
         /**
          * @brief Save and close archive
          */
-        void save();
+        bool save();
     };
 }
 
