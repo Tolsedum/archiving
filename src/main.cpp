@@ -13,10 +13,11 @@ int main(int argc, char *argv[]){
         //     std::string dir_source = dir_entry.path().string();
         //     std::cout<< dir_source <<std::endl;
         // }
-        remove("test.zip");
+        // remove("test.zip");
         archive::Archiver zip_compressor("test.zip");
-        zip_compressor.addFiles({{"test.txt", "test.txt"}});
-        zip_compressor.addDirs({{"test", "test"}});
+        zip_compressor.addFiles({{"new_file.txt", "new_file.txt"}});
+        // zip_compressor.addFiles({{"test.txt", "test.txt"}});
+        // zip_compressor.addDirs({{"test", "test"}});
         // zip_compressor.deleteFile("test.txt");
         if(!zip_compressor.save()){
             std::cout<< "Error: " << zip_compressor.getErrorMessage() << std::endl;

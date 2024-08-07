@@ -1,5 +1,4 @@
 #include "archive/Archiver.hpp"
-#include "Archiver.hpp"
 
 std::string archive::Archiver::getErrorMessage(){
     return error_message_;
@@ -16,7 +15,9 @@ void archive::Archiver::addDirs(std::map<std::string, std::string> name_dirs)
     }
 }
 
-void archive::Archiver::addFiles(std::map<std::string, std::string> name_files){
+void archive::Archiver::addFiles(
+    std::map<std::string, std::string> name_files
+){
     for (auto &&file_name : name_files){
         addFile(file_name.first, file_name.second);
     }
@@ -45,8 +46,24 @@ void archive::Archiver::cancel(){
     warnings_.clear();
 }
 
-bool archive::Archiver::save(){
+bool archive::Archiver::putDirsList(
+    zip_t *archive,
+    std::map<std::string, std::string> list_to_add
+){
     bool state = true;
+    if (!list_to_add.empty()){
+        for (auto &&dir : list_to_add){
+            state = putDirs(archive, dir.first, dir.second);
+            if(!state){
+                break;
+            }
+        }
+    }
+    return state;
+}
+
+bool archive::Archiver::save(){
+
     int err;
     zip_error_t error;
     // zip_error_init(&error_);
@@ -57,51 +74,62 @@ bool archive::Archiver::save(){
             flag_ = ZIP_CREATE;
         }
     }
-    zip_t *archive = zip_open(archive_file_name_.c_str(), flag_, &err);
-
-    if (archive == nullptr) {
-        error_message_ = "Cannot open zip archive. ";
-        zip_error_init_with_code(&error, err);
-        zip_error_fini(&error);
-        error_message_.append(zip_error_strerror(&error));
-        state = false;
-    }
-
-    if (!add_dir_name_list_.empty() && state){
-        for (auto &&dir : add_dir_name_list_){
-            if(!putDirs(archive, dir.first, dir.second)){
-                state = false;
-            }
-        }
-    }
-
-    if (!add_file_name_list_.empty() && state){
-        for (auto &&name_file : add_file_name_list_){
-            if(!putFiels(archive, name_file.first, name_file.second)){
-                state = false;
-            }
-        }
-    }
-
-    if(!add_delete_file_list_.empty() && state){
-        for (auto &&name_file : add_delete_file_list_){
-            delFile(archive, name_file);
-        }
-    }
-
-    int rez = 0;
+    bool state = true; //removeFilesIfExistsInArchive();
     if(state){
-        rez = zip_close(archive);
-        if (rez != 0) {
+        zip_t *archive = zip_open(archive_file_name_.c_str(), flag_, &err);
+
+        if (archive == nullptr) {
+            error_message_ = "Cannot open zip archive. ";
+            zip_error_init_with_code(&error, err);
+            zip_error_fini(&error);
+            error_message_.append(zip_error_strerror(&error));
+            state = false;
+        }
+
+        if(state){
+            state = putDirsList(archive, add_dir_name_list_);
+            if(state){
+                state = putDirsList(archive, add_file_name_list_);
+            }
+        }
+        // if (!add_dir_name_list_.empty() && state){
+        //     for (auto &&dir : add_dir_name_list_){
+        //         if(!putDirs(archive, dir.first, dir.second)){
+        //             state = false;
+        //         }
+        //     }
+        // }
+
+        // if (!add_file_name_list_.empty() && state){
+        //     for (auto &&name_file : add_file_name_list_){
+        //         if(!putFiels(archive, name_file.first, name_file.second)){
+        //             state = false;
+        //         }
+        //     }
+        // }
+
+        if(!add_delete_file_list_.empty() && state){
+            for (auto &&name_file : add_delete_file_list_){
+                delFile(archive, name_file);
+            }
+        }
+
+        int rez = 0;
+        if(state){
+            rez = zip_close(archive);
+            if (rez != 0) {
+                state = false;
+            }
+        }
+
+        if (!state) {
+            error_message_.append(" Cannot close zip archive");
+            zip_discard(archive);
             state = false;
         }
     }
 
-    if (!state) {
-        error_message_ = "Cannot close zip archive";
-        zip_discard(archive);
-        state = false;
-    }
+
 
     return state;
 }
@@ -133,22 +161,89 @@ bool archive::Archiver::putDirs(zip_t *archive, std::string path_source, std::st
     return true;
 }
 
-bool archive::Archiver::putFiels(zip_t *archive, std::string file_sours, std::string file_destination){
+bool archive::Archiver::addFiel(
+    zip_t *archive,
+    zip_source_t* source,
+    const char* file_destination,
+    const std::string &file_sours
+){
     bool ret_value = true;
-    zip_source_t* source = zip_source_file(archive, file_sours.c_str(), 0, -1);
-
-    if (source == nullptr){
-        error_message_ = "Can't open zip from source " + file_sours;
-        return false;
-    }
-
-    if(zip_file_add(archive, file_destination.c_str(), source, ZIP_FL_ENC_UTF_8) < 0){
+    if(zip_file_add(
+            archive,
+            file_destination,
+            source,
+            ZIP_FL_ENC_UTF_8
+        ) < 0
+    ){
         zip_source_free(source);
         error_message_.append("Can't add file to zip archive.")
             . append(" File source: ") . append(file_sours)
             . append(", file destination ") . append(file_destination);
         ret_value = false;
     }
+    return ret_value;
+}
+
+bool archive::Archiver::replaceFile(
+    zip_t *archive,
+    zip_uint64_t index,
+    zip_source_t *source,
+    const std::string &file_destination,
+    const std::string &file_sours
+){
+    bool ret_value = true;
+
+    if(zip_file_replace(
+            archive,
+            index,
+            source,
+            ZIP_FL_ENC_UTF_8
+        ) < 0
+    ){
+        zip_source_free(source);
+        error_message_.append("Can't replace file in zip archive.")
+            . append(" File source: ")
+            . append(file_sours)
+            . append(", file destination ")
+            . append(file_destination);
+        ret_value = false;
+    }
+    return ret_value;
+}
+
+bool archive::Archiver::putFiels(
+    zip_t *archive,
+    std::string file_sours,
+    std::string file_destination
+){
+    bool ret_value = true;
+    zip_source_t* source = zip_source_file(
+        archive, file_sours.c_str(), 0, -1
+    );
+
+    if (source == nullptr){
+        error_message_ = "Can't open zip from source " + file_sours;
+        return false;
+    }
+    zip_int64_t file_pos =
+        findFileInZipT(archive, file_destination);
+    if(file_pos >= 0){
+        ret_value = replaceFile(
+            archive,
+            file_pos,
+            source,
+            file_destination,
+            file_sours
+        );
+    }else{
+        ret_value = addFiel(
+            archive,
+            source,
+            file_destination.c_str(),
+            file_sours
+        );
+    }
+
     zip_source_close(source);
     // if(zip_source_close(source) < 0){
     //     ret_value = false;
@@ -158,9 +253,14 @@ bool archive::Archiver::putFiels(zip_t *archive, std::string file_sours, std::st
     return ret_value;
 }
 
-bool archive::Archiver::delFile(zip_t *archive, std::string file_name){
+bool archive::Archiver::delFile(
+    zip_t *archive, std::string file_name
+){
     bool ret_value = true;
-    if(zip_delete(archive, findFileInZipT(archive, file_name.c_str())) != 0){
+    if(zip_delete(
+            archive, findFileInZipT(archive, file_name.c_str())
+        ) != 0
+    ){
         error_message_.append(" Can`t delete fiel. File name: ")
             . append(file_name);
         ret_value = false;
@@ -168,7 +268,82 @@ bool archive::Archiver::delFile(zip_t *archive, std::string file_name){
     return ret_value;
 }
 
-void archive::Archiver::deleteFiles(std::vector<std::string> file_list){
+bool archive::Archiver::delFile(
+    zip_t *archive, zip_int64_t file_pos
+){
+    bool ret_value = true;
+    if(file_pos >= 0){
+        if(zip_delete(archive, file_pos) != 0){
+            error_message_.append(" Can`t delete fiel. File pos: ")
+                . append(std::to_string(file_pos));
+            ret_value = false;
+        }
+    }
+    return ret_value;
+}
+
+bool archive::Archiver::deleteList(
+    zip_t *archive,
+    std::map<std::string, std::string> list_to_clear
+){
+    bool state = true;
+    if (!list_to_clear.empty()){
+        for (auto &&list : list_to_clear){
+            zip_int64_t file_pos =
+                findFileInZipT(archive, list.second.c_str());
+            if(file_pos >= 0){
+                state = delFile(archive, file_pos);
+            }
+            if(!state)
+                break;
+        }
+    }
+    return state;
+}
+
+bool archive::Archiver::removeFilesIfExistsInArchive(){
+    int err;
+    zip_error_t error;
+    bool state = true;
+
+    zip_t *archive = zip_open(
+        archive_file_name_.c_str(), flag_, &err);
+
+    if (archive == nullptr) {
+        error_message_ = "Cannot open zip archive. ";
+        zip_error_init_with_code(&error, err);
+        zip_error_fini(&error);
+        error_message_.append(zip_error_strerror(&error));
+        state = false;
+    }
+    if(state){
+        state = deleteList(archive, add_dir_name_list_);
+        if(state){
+            state = deleteList(archive, add_file_name_list_);
+        }
+    }
+
+    int rez = 0;
+    if(state){
+        rez = zip_close(archive);
+        if (rez != 0) {
+            state = false;
+        }
+    }
+
+    if (!state) {
+        error_message_.append(" Cannot close zip archive");
+        zip_discard(archive);
+        state = false;
+    }
+
+    return state;
+
+}
+
+void archive::Archiver::deleteFiles(
+    std::vector<std::string> file_list
+){
     for (auto &&file_name : file_list){
         deleteFile(file_name);
     }
@@ -180,8 +355,12 @@ void archive::Archiver::deleteFile(std::string file_name){
     }
 }
 
-zip_int64_t archive::Archiver::findFileInZipT(zip_t *archive, std::string file_name){
-    return zip_name_locate(archive, file_name.c_str(), ZIP_FL_ENC_UTF_8);
+zip_int64_t archive::Archiver::findFileInZipT(
+    zip_t *archive, std::string file_name
+){
+    return zip_name_locate(
+        archive, file_name.c_str(), ZIP_FL_ENC_UTF_8
+    );
 }
 
 // void addTextInFiel(std::string name_file, std::string text){

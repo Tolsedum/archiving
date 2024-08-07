@@ -1,6 +1,6 @@
 #ifndef ARCHIVER_HPP
 #define ARCHIVER_HPP
-/** Version 1 */
+/** Version 1.1 */
 
 /**
  *  __________________________________________
@@ -46,9 +46,10 @@
 namespace archive{
     class Archiver{
     private:
-        /** https://libzip.org/documentation/zip_set_file_compression.html#ZIP_CM_DEFAULT */
+        /** https://libzip.org/documentation/libzip.html */
 
-        int compression_method_;
+        // bool throw_if_zip_exsists_;
+        // int compression_method_;
 
         short flag_;
 
@@ -59,7 +60,6 @@ namespace archive{
         std::map<std::string, std::string> add_dir_name_list_;
 
         std::vector<std::string> add_delete_file_list_;
-
         std::vector<std::string> warnings_;
 
         /**
@@ -83,17 +83,56 @@ namespace archive{
          */
         bool putFiels(zip_t *archive, std::string file_sours, std::string file_destination);
         /**
+         * Add file
+         */
+        bool addFiel(
+            zip_t *archive,
+            zip_source_t* source,
+            const char* file_destination,
+            const std::string &file_sours
+        );
+
+        /**
+         * Replace file
+         */
+        bool replaceFile(
+            zip_t *archive,
+            zip_uint64_t index,
+            zip_source_t *source,
+            const std::string &file_destination,
+            const std::string &file_sours
+        );
+
+        /**
          * @brief Delete file in archive
          * @param file_name
         */
         bool delFile(zip_t *archive, std::string file_name);
+        bool delFile(zip_t *archive, zip_int64_t file_pos);
 
+        bool removeFilesIfExistsInArchive();
+
+        bool deleteList(
+            zip_t *archive,
+            std::map<std::string, std::string> list_to_clear
+        );
+        bool putDirsList(
+            zip_t *archive,
+            std::map<std::string, std::string> list_to_add
+        );
     public:
-        Archiver(std::string name, short flag = 0)
+        Archiver(
+            std::string name,
+            short flag = 0,
+            bool throw_if_zip_exsists = false
+        )
             : flag_(flag)
             , archive_file_name_(name)
-
-        {};
+        {
+            if(throw_if_zip_exsists && std::filesystem::exists(name)){
+                throw "Zip file exists " + name;
+            }
+        };
         ~Archiver(){};
 
         std::string getErrorMessage();
