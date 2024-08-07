@@ -1,6 +1,6 @@
 #ifndef ARCHIVER_HPP
 #define ARCHIVER_HPP
-/** Version 1.1 */
+/** Version 1.2 */
 
 /**
  *  __________________________________________
