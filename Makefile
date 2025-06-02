@@ -7,12 +7,12 @@
 CXX = g++
 
 # define any compile-time flags
-CXXFLAGS	:= -std=c++20 -Wall -Wextra  #-g -ggdb #-static
+CXXFLAGS	:= -std=c++20 -Wall -Wextra -static  # -g -ggdb
 
 # define library paths in addition to /usr/lib
 #   if I wanted to include libraries not in /usr/lib I'd specify
 #   their path using -Lpath, something like:
-LFLAGS = -lzip
+LFLAGS =  -lzipz -lbz2 -llzma -lz -lzstd -v -lssl -lcrypto
 
 # define output directory
 OUTPUT	:= output

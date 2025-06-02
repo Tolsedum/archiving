@@ -66,7 +66,7 @@ bool archive::Archiver::save(){
 
     int err;
     zip_error_t error;
-    // zip_error_init(&error_);
+
     if(flag_ == 0){
         if(std::filesystem::exists(archive_file_name_)){
             flag_ = ZIP_CHECKCONS;
@@ -74,7 +74,7 @@ bool archive::Archiver::save(){
             flag_ = ZIP_CREATE;
         }
     }
-    bool state = true; //removeFilesIfExistsInArchive();
+    bool state = true;
     if(state){
         zip_t *archive = zip_open(archive_file_name_.c_str(), flag_, &err);
 
@@ -92,21 +92,6 @@ bool archive::Archiver::save(){
                 state = putDirsList(archive, add_file_name_list_);
             }
         }
-        // if (!add_dir_name_list_.empty() && state){
-        //     for (auto &&dir : add_dir_name_list_){
-        //         if(!putDirs(archive, dir.first, dir.second)){
-        //             state = false;
-        //         }
-        //     }
-        // }
-
-        // if (!add_file_name_list_.empty() && state){
-        //     for (auto &&name_file : add_file_name_list_){
-        //         if(!putFiels(archive, name_file.first, name_file.second)){
-        //             state = false;
-        //         }
-        //     }
-        // }
 
         if(!add_delete_file_list_.empty() && state){
             for (auto &&name_file : add_delete_file_list_){
@@ -128,9 +113,6 @@ bool archive::Archiver::save(){
             state = false;
         }
     }
-
-
-
     return state;
 }
 
@@ -245,11 +227,6 @@ bool archive::Archiver::putFiels(
     }
 
     zip_source_close(source);
-    // if(zip_source_close(source) < 0){
-    //     ret_value = false;
-    //     error_message_.append(" Can`t clost source. Source file: ")
-    //         . append(file_sours);
-    // }
     return ret_value;
 }
 
